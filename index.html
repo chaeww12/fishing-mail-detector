@@ -19,22 +19,24 @@
 
 <hr>
 
-<h3>📊 결과</h3>
+<h3>📊 메일 분석 결과</h3>
 <p id="mail_score"></p>
-<p id="url_score"></p>
-<p id="total_score"></p>
-<p id="level"></p>
+<p id="mail_level"></p>
 
-<h4>🚨 탐지 키워드</h4>
 <ul id="keywords"></ul>
 
-<h4>🔗 URL 탐지 이유</h4>
+<hr>
+
+<h3>🔗 URL 분석 결과</h3>
+<p id="url_score"></p>
+<p id="url_level"></p>
+
 <ul id="url_reasons"></ul>
 
 <script>
 
 // =====================
-// 메일 위험 키워드
+// 메일 키워드
 // =====================
 const dangerWords = {
     "비밀번호": 2,
@@ -54,14 +56,13 @@ const dangerWords = {
 };
 
 // =====================
-// URL 분석 함수
+// URL 분석
 // =====================
 function analyzeURL(url) {
 
     let score = 0;
     let reasons = [];
 
-    // 길이
     if (url.length > 70) {
         score += 2;
         reasons.push("URL 길이가 매우 김");
@@ -70,30 +71,26 @@ function analyzeURL(url) {
         reasons.push("URL 길이가 다소 김");
     }
 
-    // http
     if (url.startsWith("http://")) {
         score += 1;
-        reasons.push("보안이 없는 http 사용");
+        reasons.push("http 사용");
     }
 
-    // IP 주소
     if (/\d+\.\d+\.\d+\.\d+/.test(url)) {
         score += 2;
         reasons.push("IP 주소 사용");
     }
 
-    // 특수문자 -
     let special_count = (url.match(/-/g) || []).length;
 
     if (special_count >= 4) {
         score += 2;
-        reasons.push("특수문자가 매우 많음");
+        reasons.push("특수문자 많음");
     } else if (special_count >= 2) {
         score += 1;
-        reasons.push("특수문자가 다소 많음");
+        reasons.push("특수문자 다소 많음");
     }
 
-    // 키워드
     let suspicious_words = [
         "login", "verify", "secure",
         "update", "account", "bank",
@@ -107,7 +104,6 @@ function analyzeURL(url) {
         }
     }
 
-    // 도메인
     let suspicious_domains = [".xyz", ".tk", ".ru"];
 
     for (let d of suspicious_domains) {
@@ -139,7 +135,17 @@ function analyzeMail(mail) {
 }
 
 // =====================
-// 전체 분석
+// 판정 함수
+// =====================
+function judge(score) {
+
+    if (score >= 10) return "⚠️ 매우 위험";
+    else if (score >= 5) return "⚠️ 의심";
+    else return "✅ 안전";
+}
+
+// =====================
+// 실행
 // =====================
 function analyze() {
 
@@ -149,37 +155,36 @@ function analyze() {
     let [mail_score, found_words] = analyzeMail(mail);
     let [url_score, url_reasons] = analyzeURL(url);
 
-    let total = mail_score + url_score;
+    // ------------------
+    // 메일 출력
+    // ------------------
+    document.getElementById("mail_score").innerText =
+        "점수: " + mail_score;
 
-    // 판정
-    let level = "";
+    document.getElementById("mail_level").innerText =
+        "판정: " + judge(mail_score);
 
-    if (total >= 15) {
-        level = "⚠️ 매우 위험 (피싱 가능성 높음)";
-    } else if (total >= 8) {
-        level = "⚠️ 의심";
-    } else {
-        level = "✅ 안전";
-    }
-
-    // 출력
-    document.getElementById("mail_score").innerText = "메일 점수: " + mail_score;
-    document.getElementById("url_score").innerText = "URL 점수: " + url_score;
-    document.getElementById("total_score").innerText = "총 점수: " + total;
-    document.getElementById("level").innerText = "판정: " + level;
-
-    // 키워드 출력
     let klist = document.getElementById("keywords");
     klist.innerHTML = "";
+
     for (let w of found_words) {
         let li = document.createElement("li");
         li.innerText = w;
         klist.appendChild(li);
     }
 
-    // URL 이유 출력
+    // ------------------
+    // URL 출력
+    // ------------------
+    document.getElementById("url_score").innerText =
+        "점수: " + url_score;
+
+    document.getElementById("url_level").innerText =
+        "판정: " + judge(url_score);
+
     let ulist = document.getElementById("url_reasons");
     ulist.innerHTML = "";
+
     for (let r of url_reasons) {
         let li = document.createElement("li");
         li.innerText = r;
