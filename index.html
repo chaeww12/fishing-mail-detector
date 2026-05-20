@@ -2,26 +2,40 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>피싱 메일 탐지기</title>
+<title>피싱 탐지 시스템</title>
 </head>
 <body>
 
-<h2>📧 피싱 메일 탐지기</h2>
+<h2>📧 피싱 메일 + URL 탐지기</h2>
 
-<textarea id="mail" rows="10" cols="60"></textarea>
+<h3>메일 입력</h3>
+<textarea id="mail" rows="8" cols="60"></textarea>
+
+<h3>URL 입력</h3>
+<input type="text" id="url" size="60">
+
 <br><br>
-
 <button onclick="analyze()">분석하기</button>
 
+<hr>
+
 <h3>📊 결과</h3>
-<p id="score"></p>
+<p id="mail_score"></p>
+<p id="url_score"></p>
+<p id="total_score"></p>
 <p id="level"></p>
 
-<h4>🚨 키워드</h4>
+<h4>🚨 탐지 키워드</h4>
 <ul id="keywords"></ul>
+
+<h4>🔗 URL 탐지 이유</h4>
+<ul id="url_reasons"></ul>
 
 <script>
 
+// =====================
+// 메일 위험 키워드
+// =====================
 const dangerWords = {
     "비밀번호": 2,
     "로그인": 2,
@@ -39,9 +53,77 @@ const dangerWords = {
     "은행": 2
 };
 
-function analyze() {
+// =====================
+// URL 분석 함수
+// =====================
+function analyzeURL(url) {
 
-    let mail = document.getElementById("mail").value;
+    let score = 0;
+    let reasons = [];
+
+    // 길이
+    if (url.length > 70) {
+        score += 2;
+        reasons.push("URL 길이가 매우 김");
+    } else if (url.length > 50) {
+        score += 1;
+        reasons.push("URL 길이가 다소 김");
+    }
+
+    // http
+    if (url.startsWith("http://")) {
+        score += 1;
+        reasons.push("보안이 없는 http 사용");
+    }
+
+    // IP 주소
+    if (/\d+\.\d+\.\d+\.\d+/.test(url)) {
+        score += 2;
+        reasons.push("IP 주소 사용");
+    }
+
+    // 특수문자 -
+    let special_count = (url.match(/-/g) || []).length;
+
+    if (special_count >= 4) {
+        score += 2;
+        reasons.push("특수문자가 매우 많음");
+    } else if (special_count >= 2) {
+        score += 1;
+        reasons.push("특수문자가 다소 많음");
+    }
+
+    // 키워드
+    let suspicious_words = [
+        "login", "verify", "secure",
+        "update", "account", "bank",
+        "confirm", "password"
+    ];
+
+    for (let word of suspicious_words) {
+        if (url.toLowerCase().includes(word)) {
+            score += 1;
+            reasons.push("의심 키워드: " + word);
+        }
+    }
+
+    // 도메인
+    let suspicious_domains = [".xyz", ".tk", ".ru"];
+
+    for (let d of suspicious_domains) {
+        if (url.includes(d)) {
+            score += 2;
+            reasons.push("의심 도메인: " + d);
+        }
+    }
+
+    return [score, reasons];
+}
+
+// =====================
+// 메일 분석
+// =====================
+function analyzeMail(mail) {
 
     let score = 0;
     let found = [];
@@ -53,26 +135,55 @@ function analyze() {
         }
     }
 
+    return [score, found];
+}
+
+// =====================
+// 전체 분석
+// =====================
+function analyze() {
+
+    let mail = document.getElementById("mail").value;
+    let url = document.getElementById("url").value;
+
+    let [mail_score, found_words] = analyzeMail(mail);
+    let [url_score, url_reasons] = analyzeURL(url);
+
+    let total = mail_score + url_score;
+
+    // 판정
     let level = "";
 
-    if (score >= 10) {
-        level = "⚠️ 매우 위험";
-    } else if (score >= 5) {
+    if (total >= 15) {
+        level = "⚠️ 매우 위험 (피싱 가능성 높음)";
+    } else if (total >= 8) {
         level = "⚠️ 의심";
     } else {
         level = "✅ 안전";
     }
 
-    document.getElementById("score").innerText = "점수: " + score;
+    // 출력
+    document.getElementById("mail_score").innerText = "메일 점수: " + mail_score;
+    document.getElementById("url_score").innerText = "URL 점수: " + url_score;
+    document.getElementById("total_score").innerText = "총 점수: " + total;
     document.getElementById("level").innerText = "판정: " + level;
 
-    let list = document.getElementById("keywords");
-    list.innerHTML = "";
-
-    for (let w of found) {
+    // 키워드 출력
+    let klist = document.getElementById("keywords");
+    klist.innerHTML = "";
+    for (let w of found_words) {
         let li = document.createElement("li");
         li.innerText = w;
-        list.appendChild(li);
+        klist.appendChild(li);
+    }
+
+    // URL 이유 출력
+    let ulist = document.getElementById("url_reasons");
+    ulist.innerHTML = "";
+    for (let r of url_reasons) {
+        let li = document.createElement("li");
+        li.innerText = r;
+        ulist.appendChild(li);
     }
 }
 
