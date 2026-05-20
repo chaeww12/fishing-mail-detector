@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>피싱 메일 탐지기</title>
+</head>
+<body>
+
+<h2>📧 피싱 메일 탐지기</h2>
+
+<textarea id="mail" rows="10" cols="60"></textarea>
+<br><br>
+
+<button onclick="analyze()">분석하기</button>
+
+<h3>📊 결과</h3>
+<p id="score"></p>
+<p id="level"></p>
+
+<h4>🚨 키워드</h4>
+<ul id="keywords"></ul>
+
+<script>
+
+const dangerWords = {
+    "비밀번호": 2,
+    "로그인": 2,
+    "인증": 2,
+    "계정": 2,
+    "긴급": 3,
+    "당첨": 3,
+    "환불": 2,
+    "결제": 1,
+    "업데이트": 1,
+    "보안": 1,
+    "확인": 1,
+    "즉시": 3,
+    "클릭": 3,
+    "은행": 2
+};
+
+function analyze() {
+
+    let mail = document.getElementById("mail").value;
+
+    let score = 0;
+    let found = [];
+
+    for (let word in dangerWords) {
+        if (mail.includes(word)) {
+            score += dangerWords[word];
+            found.push(word);
+        }
+    }
+
+    let level = "";
+
+    if (score >= 10) {
+        level = "⚠️ 매우 위험";
+    } else if (score >= 5) {
+        level = "⚠️ 의심";
+    } else {
+        level = "✅ 안전";
+    }
+
+    document.getElementById("score").innerText = "점수: " + score;
+    document.getElementById("level").innerText = "판정: " + level;
+
+    let list = document.getElementById("keywords");
+    list.innerHTML = "";
+
+    for (let w of found) {
+        let li = document.createElement("li");
+        li.innerText = w;
+        list.appendChild(li);
+    }
+}
+
+</script>
+
+</body>
+</html>
